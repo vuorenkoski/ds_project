@@ -15,6 +15,8 @@ https://ourworldindata.org/
 https://www.imf.org/external/datamapper
 https://databank.worldbank.org/source/world-development-indicators
 
+OECD: https://data.oecd.org/
+https://data.oecd.org/gdp/quarterly-gdp.htm#indicator-chart (quarterly GDP)
 
 WORLD BANK:
 GDP: https://data.worldbank.org/indicator/NY.GDP.PCAP.CD
