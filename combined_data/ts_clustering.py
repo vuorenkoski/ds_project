@@ -43,7 +43,7 @@ def cluster_into_n(df, max_clusters, show_graph=False):
         plt.show()
     return clustered_dfs
 
-def EDA():
+def EDA(mode):
     def cluster_vaccination_rate():
         def preprocessing():
             # load data
@@ -109,8 +109,15 @@ def EDA():
     # final clustering : missing data extrapolation
     processed_features = processed_features.fillna(0)
 
+    if mode == 'covid':
+        processed_features = processed_features[['tourism', 'vaccination']]
+    elif mode == 'economy':
+        processed_features = processed_features[['gdp', 'gdp_growth', 'unemployment', 'debt_rate']]
+    elif mode == 'all':
+        pass
+
     # TODO cluster using k-modes clustering 
-    model = KModes(n_clusters=9, init = "Huang", n_init = 5, verbose=1)
+    model = KModes(n_clusters=9, init = "Huang", n_init = 1, verbose=1)
     clustering_result = model.fit_predict(processed_features)
     processed_features['cluster'] = clustering_result
     target_df = processed_features.astype(float).iloc[:, :-1]
@@ -168,10 +175,11 @@ def visualize(clustered_df, individual=False):
         plt.show()
 
 if __name__ == "__main__":
-    if 'clustered_df.csv' not in os.listdir(os.getcwd()):
-        clustered_df = EDA()
-        clustered_df.to_csv('clustered_df.csv', index=False)
-    else:
-        clustered_df = pd.read_csv('clustered_df.csv').set_index('country_code')
-    visualize(clustered_df, individual=True)
-    visualize(clustered_df, individual=False)
+    for mode in ['covid', 'economy', 'all']:
+        if 'clustered_df_{}.csv'.format(mode) not in os.listdir(os.getcwd()):
+            clustered_df = EDA(mode=mode)
+            clustered_df.to_csv('clustered_df_{}.csv'.format(mode))
+        else:
+            clustered_df = pd.read_csv('clustered_df_{}.csv'.format(mode)).set_index('country_code')
+        visualize(clustered_df, individual=True)
+        #visualize(clustered_df, individual=False)
