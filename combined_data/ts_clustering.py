@@ -80,6 +80,41 @@ def EDA(mode):
         result_df = pd.concat(reindexed_clusters)
         return result_df.cluster
 
+    def cluster_death_rate():
+        def preprocessing():
+            url = "https://covid.ourworldindata.org/data/owid-covid-data.csv"
+            df = pd.read_csv(url)
+            df=df[['total_deaths_per_million','location','date']].copy()
+            df['date'] = df['date'].str[0:7]
+            df = df.groupby(['date', 'location']).max().reset_index().set_index('location')
+
+            codes = pd.read_csv('countries.csv')
+            codes = codes[['country_code', 'Name']].set_index('Name')
+
+            df = df.join(codes).reset_index(drop=True)
+            df = df.groupby(['country_code', 'date']).max().reset_index()
+            ts_df = df.pivot('date', 'country_code', 'total_deaths_per_million').T
+            
+            ts_df = ts_df.reindex(sorted(ts_df.columns), axis=1)
+            ts_df = ts_df.interpolate('linear').fillna(0)
+            return ts_df
+        processed_df = preprocessing()
+        result = cluster_into_n(processed_df, 9, show_graph=False)
+
+        # only leave clusters with more than 3 entries, clusters all extra entries into 1 cluster
+        clusters = [i for i in result if len(i) > 3]
+        reindexed_clusters = []
+        for idx, df in enumerate(clusters):
+            temp_df = df.copy()
+            temp_df.cluster = idx+1
+            reindexed_clusters.append(temp_df)
+        if len(reindexed_clusters) != 9:
+            extra_cluster = pd.concat([i for i in result if len(i) <= 3])
+            extra_cluster.cluster = len(reindexed_clusters) + 1
+            reindexed_clusters.append(extra_cluster)
+        result_df = pd.concat(reindexed_clusters)
+        return result_df.cluster
+
     def cluster_yearly_data():
         lst = []
         for i in [1, 2, 3, 4, 5]:
@@ -103,16 +138,18 @@ def EDA(mode):
     # append cluster data from monthly vaccination data 
     processed_features = cluster_yearly_data()
     vaccination_data = cluster_vaccination_rate().rename('vaccination')
+    death_rate_data = cluster_death_rate().rename('death_rate')
     processed_features.columns = ['gdp', 'tourism', 'unemployment', 'gdp_growth', 'debt_rate']
     processed_features = processed_features.join(vaccination_data)
+    processed_features = processed_features.join(death_rate_data)
 
     # final clustering : missing data extrapolation
     processed_features = processed_features.fillna(0)
 
     if mode == 'covid':
-        processed_features = processed_features[['tourism', 'vaccination']]
+        processed_features = processed_features[['vaccination', 'death_rate']]
     elif mode == 'economy':
-        processed_features = processed_features[['gdp', 'gdp_growth', 'unemployment', 'debt_rate']]
+        processed_features = processed_features[['gdp', 'gdp_growth', 'unemployment', 'debt_rate', 'tourism']]
     elif mode == 'all':
         pass
 
